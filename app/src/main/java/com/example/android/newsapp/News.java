@@ -16,23 +16,26 @@ public class News {
         mWebPublicationDate = webPublicationDate;
     }
 
-    public String getmSectionName() {
+    public String getSectionName() {
         return mSectionName;
     }
 
-    public String getmWebTitle() {
+    public String getWebTitle() {
         return mWebTitle;
     }
 
-    public String getmType() {
+    public String getType() {
         return mType;
     }
 
-    public String getmWebUrl() {
+    public String getWebUrl() {
         return mWebUrl;
     }
 
-    public String getmWebPublicationDate() {
+    public String getWebPublicationDate() {
         return mWebPublicationDate;
     }
 }
+
+
+
