@@ -1,5 +1,6 @@
 package com.example.android.newsapp;
 
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,11 +14,11 @@ import butterknife.ButterKnife;
 
 public class NewsAdapter extends RecyclerView.Adapter<NewsAdapter.NewsViewHolder>{
 
-    private List<News> newsList;
-
     public NewsAdapter(List<News> newsList) {
         this.newsList = newsList;
     }
+
+    private List<News> newsList;
 
     public static class NewsViewHolder extends RecyclerView.ViewHolder {
         @BindView(R.id.sectionName_textView) TextView mSectionName;
@@ -33,9 +34,10 @@ public class NewsAdapter extends RecyclerView.Adapter<NewsAdapter.NewsViewHolder
 
     @Override
     public NewsViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View itemView = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.news_item, parent, false);
-        return new NewsViewHolder(itemView);
+        Context context = parent.getContext();
+        View itemView = LayoutInflater.from(context).inflate(R.layout.news_item, parent, false);
+        NewsViewHolder newsViewHolder = new NewsViewHolder(itemView);
+        return newsViewHolder;
     }
 
     @Override
