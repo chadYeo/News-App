@@ -35,7 +35,8 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String LOG_TAG = MainActivity.class.getSimpleName();
 
-    private static final String NEWS_REQUEST_URL = "http://content.guardianapis.com/search?q=debate&tag=politics/politics&from-date=2014-01-01&api-key=test";
+    private static final String NEWS_REQUEST_URL =
+            "http://content.guardianapis.com/search?q=debate&tag=politics/politics&from-date=2014-01-01&api-key=test";
 
     @BindView(R.id.empty_textView) TextView mEmptyTextView;
     @BindView(R.id.recycler_view) RecyclerView mRecyclerView;
