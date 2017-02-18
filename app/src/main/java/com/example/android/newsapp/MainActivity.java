@@ -1,9 +1,13 @@
 package com.example.android.newsapp;
 
 import android.app.SearchManager;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v4.widget.SearchViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -36,7 +40,11 @@ public class MainActivity extends AppCompatActivity {
     public static final String LOG_TAG = MainActivity.class.getSimpleName();
 
     private static final String NEWS_REQUEST_URL =
-            "http://content.guardianapis.com/search?q=debate&tag=politics/politics&from-date=2014-01-01&api-key=test";
+            "http://content.guardianapis.com/search?q=";
+
+    private static final String NEWS_REQUST_API = "&api-key=test";
+
+    private static String mSearchInput;
 
     @BindView(R.id.empty_textView) TextView mEmptyTextView;
     @BindView(R.id.recycler_view) RecyclerView mRecyclerView;
@@ -57,28 +65,52 @@ public class MainActivity extends AppCompatActivity {
         mAdapter = new NewsAdapter(new ArrayList<News>());
 
         mRecyclerView.setAdapter(mAdapter);
-
-        NewsAyncTask task = new NewsAyncTask();
-        task.execute();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
 
-        SearchView searchView = (SearchView) MenuItemCompat.getActionView(menu.findItem(R.id.action_search));
-        SearchManager searchManager = (SearchManager) getSystemService(SEARCH_SERVICE);
-        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        final SearchView searchView = (SearchView) MenuItemCompat.getActionView(menu.findItem(R.id.action_search));
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        if (null != searchManager) {
+            searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        }
 
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String input) {
+                input.replace(" ", "+");
+                input.trim();
+                mSearchInput = input;
+                searchView.clearFocus();
+
+                NewsAyncTask task = new NewsAyncTask();
+                task.execute();
+
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
         return true;
     }
+
+
 
     private class NewsAyncTask extends AsyncTask<URL, Void, ArrayList<News>> {
 
         @Override
         protected ArrayList<News> doInBackground(URL... urls) {
+
             //Create URL
-            URL url = createUrl(NEWS_REQUEST_URL);
+            String searchInput = NEWS_REQUEST_URL + mSearchInput + NEWS_REQUST_API;
+            searchInput = searchInput.replaceAll(" ", "+");
+
+            URL url = createUrl(searchInput);
 
             // Perform HTTP Request to the URL and receive a JSON response back
             String jsonResponse = "";
@@ -91,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
             // Extract relevant field from the JSON and create an ArrayList of News
             ArrayList<News> newsArrayList = extractNewsFromJson(jsonResponse);
 
-            Log.i(LOG_TAG, "doInBackground is initiated");
+            Log.i(LOG_TAG, "doInBackground is initiated: " + url);
 
             // Return the object as the result for the AsyncTask
             return newsArrayList;
