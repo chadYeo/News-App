@@ -55,12 +55,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textStyle="bold"
+            android:textColor="@color/date_color"
             android:text="Date: " />
 
         <TextView
             android:id="@+id/webPublicationDate_value_textView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textColor="@color/date_color"
             tools:text="2017-02-07 12:00 AM" />
 
     </LinearLayout>

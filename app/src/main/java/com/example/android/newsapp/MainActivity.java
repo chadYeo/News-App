@@ -1,8 +1,10 @@
 package com.example.android.newsapp;
 
+import android.app.LoaderManager;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.Loader;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -34,13 +36,17 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+        implements LoaderManager.LoaderCallbacks<List<News>>, SearchView.OnQueryTextListener {
 
     public static final String LOG_TAG = MainActivity.class.getSimpleName();
+
+    private static final int NEWS_LOADER_ID = 1;
 
     private static final String NEWS_REQUEST_URL =
             "http://content.guardianapis.com/search?q=";
@@ -75,195 +81,59 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.main_menu, menu);
 
         final SearchView searchView = (SearchView) MenuItemCompat.getActionView(menu.findItem(R.id.action_search));
-        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        if (null != searchManager) {
-            searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-        }
-
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String input) {
-                if (isNetworkConnected()) {
-                    input.replace(" ", "+");
-                    input.trim();
-                    mSearchInput = input;
-                    searchView.clearFocus();
-
-                    NewsAsyncTask task = new NewsAsyncTask();
-                    task.execute();
-                } else {
-                    Toast.makeText(getApplicationContext(), "There's no internet connection", Toast.LENGTH_SHORT).show();
-                }
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                return false;
-            }
-        });
+        searchView.setOnQueryTextListener(this);
         return true;
+    }
+
+    @Override
+    public boolean onQueryTextSubmit(String input) {
+        if (isNetworkConnected()) {
+            input = input.replace(" ", "+");
+            input.trim();
+            mSearchInput = NEWS_REQUEST_URL + input + NEWS_REQUST_API;
+
+            LoaderManager loaderManager = getLoaderManager();
+            loaderManager.restartLoader(NEWS_LOADER_ID, null, this);
+
+
+        } else {
+            Toast.makeText(getApplicationContext(), "There's no internet connection", Toast.LENGTH_SHORT).show();
+        }
+        return true;
+
+    }
+
+    @Override
+    public boolean onQueryTextChange(String newText) {
+        return true;
+    }
+
+    @Override
+    public Loader<List<News>> onCreateLoader(int id, Bundle args) {
+        return new NewsLoader(this, mSearchInput);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<List<News>> loader, List<News> data) {
+        if (data != null && !data.isEmpty()) {
+            mRecyclerView.setVisibility(View.VISIBLE);
+            mEmptyTextView.setVisibility(View.GONE);
+
+            mAdapter = new NewsAdapter(data);
+            mRecyclerView.setAdapter(mAdapter);
+        } else {
+            mEmptyTextView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<List<News>> loader) {
+        mAdapter.clear();
     }
 
     private boolean isNetworkConnected() {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = cm.getActiveNetworkInfo();
         return networkInfo != null && networkInfo.isConnectedOrConnecting();
-    }
-
-    private class NewsAsyncTask extends AsyncTask<URL, Void, ArrayList<News>> {
-
-        @Override
-        protected ArrayList<News> doInBackground(URL... urls) {
-
-            String searchInput = NEWS_REQUEST_URL + mSearchInput + NEWS_REQUST_API;
-            searchInput = searchInput.replaceAll(" ", "+");
-
-            //Create URL
-            URL url = createUrl(searchInput);
-
-            // Perform HTTP Request to the URL and receive a JSON response back
-            String jsonResponse = "";
-            try {
-                jsonResponse = makeHttpRequest(url);
-            } catch (IOException e) {
-                Log.e(LOG_TAG, "IOException ", e);
-            }
-
-            // Extract relevant field from the JSON and create an ArrayList of News
-            ArrayList<News> newsArrayList = extractNewsFromJson(jsonResponse);
-
-            Log.i(LOG_TAG, "doInBackground is initiated: " + url);
-
-            // Return the object as the result for the AsyncTask
-            return newsArrayList;
-        }
-
-        @Override
-        protected void onPostExecute(ArrayList<News> newses) {
-            Log.i(LOG_TAG, "onPostExecute is initiated");
-
-            if (newses != null && !newses.isEmpty()) {
-                mRecyclerView.setVisibility(View.VISIBLE);
-                mEmptyTextView.setVisibility(View.GONE);
-
-                mAdapter = new NewsAdapter(newses);
-                mRecyclerView.setAdapter(mAdapter);
-            } else {
-                mEmptyTextView.setVisibility(View.VISIBLE);
-            }
-        }
-
-        //Returns new URL object from the given string URL.
-        private URL createUrl(String stringUrl) {
-            URL url = null;
-            try {
-                url = new URL(stringUrl);
-            } catch (MalformedURLException e) {
-                Log.e(LOG_TAG, "Error with creating URL ", e);
-            }
-            Log.i(LOG_TAG, "createUrl is initiated");
-            return url;
-        }
-
-        private String makeHttpRequest(URL url) throws IOException{
-            String jsonResponse = "";
-            HttpURLConnection urlConnection = null;
-            InputStream inputStream = null;
-
-            try{
-                urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
-                urlConnection.setConnectTimeout(100000);
-                urlConnection.setReadTimeout(100000);
-                urlConnection.connect();
-
-                if (urlConnection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                    inputStream = urlConnection.getInputStream();
-                    jsonResponse = readFromStream(inputStream);
-                } else {
-                    Log.e(LOG_TAG, "Error response code: " + urlConnection.getResponseCode());
-                }
-            } catch (IOException e) {
-                Log.e(LOG_TAG, "Error with making HTTP Request", e);
-            }finally {
-                if (urlConnection != null) {
-                    urlConnection.disconnect();
-                }
-                if (inputStream != null) {
-                    inputStream.close();
-                }
-            }
-            Log.i(LOG_TAG, "makeHttpRequest is initiated");
-            return jsonResponse;
-        }
-
-        private String readFromStream(InputStream inputStream) throws IOException {
-            StringBuilder output = new StringBuilder();
-            if (inputStream != null) {
-                InputStreamReader inputStreamReader = new InputStreamReader(inputStream, Charset.forName("UTF-8"));
-                BufferedReader reader = new BufferedReader(inputStreamReader);
-                String line = reader.readLine();
-                while (line != null) {
-                    output.append(line);
-                    line = reader.readLine();
-                }
-            }
-            Log.i(LOG_TAG, "readFromStream is initiated");
-
-            return output.toString();
-        }
-
-        private ArrayList<News> extractNewsFromJson(String newsJSON) {
-            if (TextUtils.isEmpty(newsJSON)) {
-                return null;
-            }
-
-            ArrayList<News> newsArrayList = new ArrayList<>();
-
-            Log.i(LOG_TAG, "extractNewsFromJson is initiated");
-
-            try {
-                JSONObject baseJsonResponse = new JSONObject(newsJSON);
-                JSONObject response = baseJsonResponse.getJSONObject("response");
-                JSONArray results = response.getJSONArray("results");
-
-                // Extract out the sectionName, webTitle, type, webUrl, webPublicationDate.
-                for (int i=0; i<results.length(); i++) {
-                    JSONObject currentItem = results.getJSONObject(i);
-
-                    String sectionName = "";
-                    if (currentItem.optString("sectionName") != null) {
-                        sectionName = currentItem.optString("sectionName");
-                    }
-
-                    String webTitle = "";
-                    if (currentItem.optString("webTitle") != null) {
-                        webTitle = currentItem.optString("webTitle");
-                    }
-
-                    String type = "";
-                    if(currentItem.optString("type") != null) {
-                        type = currentItem.optString("type");
-                    }
-
-                    String webUrl = "";
-                    if (currentItem.optString("webUrl") != null) {
-                        webUrl = currentItem.optString("webUrl");
-                    }
-
-                    String webPublicationDate = "";
-                    if (currentItem.optString("webPublicationDate") != null) {
-                        webPublicationDate = currentItem.optString("webPublicationDate");
-                    }
-
-                    newsArrayList.add(new News(sectionName, webTitle, type, webUrl, webPublicationDate));
-                }
-
-            } catch (JSONException e) {
-                Log.e(LOG_TAG, "Problem parsing the book JSON results", e);
-            }
-            return newsArrayList;
-        }
     }
 }
