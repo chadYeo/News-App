@@ -1,12 +1,16 @@
 package com.example.android.newsapp;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import butterknife.BindView;
@@ -42,11 +46,20 @@ public class NewsAdapter extends RecyclerView.Adapter<NewsAdapter.NewsViewHolder
 
     @Override
     public void onBindViewHolder(NewsViewHolder holder, int position) {
-        News news = newsList.get(position);
+        final News news = newsList.get(position);
         holder.mSectionName.setText(news.getSectionName());
         holder.mWebTitle.setText(news.getWebTitle());
         holder.mType.setText(news.getType());
         holder.mWebPublicationDate.setText(news.getWebPublicationDate());
+
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Uri newsUri = Uri.parse(news.getWebUrl());
+                Intent webIntent = new Intent(Intent.ACTION_VIEW, newsUri);
+                ((MainActivity)v.getContext()).startActivity(webIntent);
+            }
+        });
     }
 
     @Override
