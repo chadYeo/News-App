@@ -20,6 +20,8 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -55,8 +57,12 @@ public class MainActivity extends AppCompatActivity
 
     private String mSearchInput = "";
 
+    private SearchView mSearchView;
+
     @BindView(R.id.empty_textView) TextView mEmptyTextView;
+    @BindView(R.id.loading_progressBar) ProgressBar mProgressBar;
     @BindView(R.id.recycler_view) RecyclerView mRecyclerView;
+
     private NewsAdapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
 
@@ -71,6 +77,8 @@ public class MainActivity extends AppCompatActivity
         mLayoutManager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
+        mProgressBar.setVisibility(View.GONE);
+
         mAdapter = new NewsAdapter(new ArrayList<News>());
 
         mRecyclerView.setAdapter(mAdapter);
@@ -80,8 +88,9 @@ public class MainActivity extends AppCompatActivity
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
 
-        final SearchView searchView = (SearchView) MenuItemCompat.getActionView(menu.findItem(R.id.action_search));
-        searchView.setOnQueryTextListener(this);
+        mSearchView = (SearchView) MenuItemCompat.getActionView(menu.findItem(R.id.action_search));
+        mSearchView.setOnQueryTextListener(this);
+
         return true;
     }
 
@@ -94,8 +103,8 @@ public class MainActivity extends AppCompatActivity
 
             LoaderManager loaderManager = getLoaderManager();
             loaderManager.restartLoader(NEWS_LOADER_ID, null, this);
-
-
+            mEmptyTextView.setVisibility(View.GONE);
+            mSearchView.clearFocus();
         } else {
             Toast.makeText(getApplicationContext(), "There's no internet connection", Toast.LENGTH_SHORT).show();
         }
@@ -110,6 +119,9 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public Loader<List<News>> onCreateLoader(int id, Bundle args) {
+        mRecyclerView.setVisibility(View.GONE);
+        mProgressBar.setVisibility(View.VISIBLE);
+
         return new NewsLoader(this, mSearchInput);
     }
 
@@ -118,6 +130,7 @@ public class MainActivity extends AppCompatActivity
         if (data != null && !data.isEmpty()) {
             mRecyclerView.setVisibility(View.VISIBLE);
             mEmptyTextView.setVisibility(View.GONE);
+            mProgressBar.setVisibility(View.GONE);
 
             mAdapter = new NewsAdapter(data);
             mRecyclerView.setAdapter(mAdapter);
@@ -128,6 +141,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onLoaderReset(Loader<List<News>> loader) {
+        mProgressBar.setVisibility(View.VISIBLE);
         mAdapter.clear();
     }
 
