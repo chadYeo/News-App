@@ -3,6 +3,8 @@ package com.example.android.newsapp;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -17,6 +19,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -44,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String NEWS_REQUST_API = "&api-key=test";
 
-    private static String mSearchInput;
+    private String mSearchInput = "";
 
     @BindView(R.id.empty_textView) TextView mEmptyTextView;
     @BindView(R.id.recycler_view) RecyclerView mRecyclerView;
@@ -80,14 +83,17 @@ public class MainActivity extends AppCompatActivity {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String input) {
-                input.replace(" ", "+");
-                input.trim();
-                mSearchInput = input;
-                searchView.clearFocus();
+                if (isNetworkConnected()) {
+                    input.replace(" ", "+");
+                    input.trim();
+                    mSearchInput = input;
+                    searchView.clearFocus();
 
-                NewsAyncTask task = new NewsAyncTask();
-                task.execute();
-
+                    NewsAsyncTask task = new NewsAsyncTask();
+                    task.execute();
+                } else {
+                    Toast.makeText(getApplicationContext(), "There's no internet connection", Toast.LENGTH_SHORT).show();
+                }
                 return true;
             }
 
@@ -99,17 +105,21 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    private boolean isNetworkConnected() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+        return networkInfo != null && networkInfo.isConnectedOrConnecting();
+    }
 
-
-    private class NewsAyncTask extends AsyncTask<URL, Void, ArrayList<News>> {
+    private class NewsAsyncTask extends AsyncTask<URL, Void, ArrayList<News>> {
 
         @Override
         protected ArrayList<News> doInBackground(URL... urls) {
 
-            //Create URL
             String searchInput = NEWS_REQUEST_URL + mSearchInput + NEWS_REQUST_API;
             searchInput = searchInput.replaceAll(" ", "+");
 
+            //Create URL
             URL url = createUrl(searchInput);
 
             // Perform HTTP Request to the URL and receive a JSON response back
